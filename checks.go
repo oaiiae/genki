@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 )
+
+var ErrorHandler = func(error) {}
 
 type Checks map[string]func(context.Context) error
 
@@ -31,7 +34,23 @@ func (m Checks) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "OK")
 	default:
+		ErrorHandler(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintln(w, err)
 	}
+}
+
+func Always() Checks {
+	return Checks{"always": func(context.Context) error { return nil }}
+}
+
+func After(d time.Duration) Checks {
+	t := time.Now().Add(d)
+	return Checks{"after": func(context.Context) error {
+		left := time.Until(t)
+		if left > 0 {
+			return fmt.Errorf("%v left", left)
+		}
+		return nil
+	}}
 }
