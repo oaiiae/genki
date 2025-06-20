@@ -9,8 +9,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var ErrorHandler = func(error) {}
-
 type Checks map[string]func(context.Context) error
 
 func (m Checks) Run(ctx context.Context) error {
@@ -27,17 +25,19 @@ func (m Checks) Run(ctx context.Context) error {
 	return eg.Wait()
 }
 
-func (m Checks) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	r.Header.Set("Content-Type", "text/plain; charset=utf-8")
-	switch err := m.Run(r.Context()); err {
-	case nil:
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, "OK")
-	default:
-		ErrorHandler(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintln(w, err)
-	}
+func (m Checks) Handler(errorHandler func(error)) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Header.Set("Content-Type", "text/plain; charset=utf-8")
+		switch err := m.Run(r.Context()); err {
+		case nil:
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintln(w, "OK")
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintln(w, err)
+			errorHandler(err)
+		}
+	})
 }
 
 func Always() Checks {
