@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -84,4 +85,16 @@ func ExampleChecks_Handler_ko() {
 	// 500 Internal Server Error
 	// map[Content-Type:[text/plain; charset=utf-8]]
 	// [cond] unmet
+}
+
+func TestAlways(t *testing.T) {
+	checks := genki.Always()
+	assert.NoError(t, checks.Run(context.Background()))
+}
+
+func TestAfter(t *testing.T) {
+	checks := genki.After(time.Millisecond)
+	assert.Error(t, checks.Run(context.Background()))
+	time.Sleep(time.Millisecond)
+	assert.NoError(t, checks.Run(context.Background()))
 }
