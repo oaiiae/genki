@@ -27,7 +27,7 @@ func (m Checks) Run(ctx context.Context) error {
 
 func (m Checks) Handler(errorHandler func(error)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.Header.Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		switch err := m.Run(r.Context()); err {
 		case nil:
 			w.WriteHeader(http.StatusOK)
