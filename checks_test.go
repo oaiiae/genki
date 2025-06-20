@@ -3,6 +3,10 @@ package genki_test
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
+	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,4 +51,37 @@ func TestChecks_Run(t *testing.T) {
 			assert.ErrorIs(t, err, tC.targetErr)
 		})
 	}
+}
+
+func ExampleChecks_Handler_ok() {
+	w := httptest.NewRecorder()
+	genki.Checks{"cond": func(context.Context) error { return nil }}.
+		Handler(func(err error) { fmt.Println("error handler:", err) }).
+		ServeHTTP(w, httptest.NewRequest("GET", "http://example.com", nil))
+
+	fmt.Fprintln(os.Stdout, w.Result().Status)
+	fmt.Fprintln(os.Stdout, w.Result().Header)
+	io.Copy(os.Stdout, w.Result().Body)
+
+	//Output:
+	// 200 OK
+	// map[Content-Type:[text/plain; charset=utf-8]]
+	// OK
+}
+
+func ExampleChecks_Handler_ko() {
+	w := httptest.NewRecorder()
+	genki.Checks{"cond": func(context.Context) error { return errors.New("unmet") }}.
+		Handler(func(err error) { fmt.Println("error handler:", err) }).
+		ServeHTTP(w, httptest.NewRequest("GET", "http://example.com", nil))
+
+	fmt.Fprintln(os.Stdout, w.Result().Status)
+	fmt.Fprintln(os.Stdout, w.Result().Header)
+	io.Copy(os.Stdout, w.Result().Body)
+
+	//Output:
+	// error handler: [cond] unmet
+	// 500 Internal Server Error
+	// map[Content-Type:[text/plain; charset=utf-8]]
+	// [cond] unmet
 }
