@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/oaiiae/genki"
 )
@@ -58,7 +60,7 @@ func ExampleChecks_Handler_ok() {
 	w := httptest.NewRecorder()
 	genki.Checks{"cond": func(context.Context) error { return nil }}.
 		Handler(func(err error) { fmt.Println("error handler:", err) }).
-		ServeHTTP(w, httptest.NewRequest("GET", "http://example.com", nil))
+		ServeHTTP(w, httptest.NewRequest(http.MethodGet, "http://example.com", nil))
 
 	fmt.Fprintln(os.Stdout, w.Result().Status)
 	fmt.Fprintln(os.Stdout, w.Result().Header)
@@ -74,7 +76,7 @@ func ExampleChecks_Handler_ko() {
 	w := httptest.NewRecorder()
 	genki.Checks{"cond": func(context.Context) error { return errors.New("unmet") }}.
 		Handler(func(err error) { fmt.Println("error handler:", err) }).
-		ServeHTTP(w, httptest.NewRequest("GET", "http://example.com", nil))
+		ServeHTTP(w, httptest.NewRequest(http.MethodGet, "http://example.com", nil))
 
 	fmt.Fprintln(os.Stdout, w.Result().Status)
 	fmt.Fprintln(os.Stdout, w.Result().Header)
@@ -94,7 +96,7 @@ func TestAlways(t *testing.T) {
 
 func TestAfter(t *testing.T) {
 	checks := genki.After(time.Millisecond)
-	assert.Error(t, checks.Run(context.Background()))
+	require.Error(t, checks.Run(context.Background()))
 	time.Sleep(time.Millisecond)
 	assert.NoError(t, checks.Run(context.Background()))
 }
